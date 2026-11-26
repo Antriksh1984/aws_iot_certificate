@@ -1,0 +1,24 @@
+# Terraform state and working files (state contains device private keys)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
+
+# Device certificates, private keys and Root CA
+certs/
+
+# Build output (Lambda zips, Grafana data) and downloaded tools (portable Grafana)
+build/
+tools/
+*.zip
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/

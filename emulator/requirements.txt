@@ -1,0 +1,4 @@
+awsiotsdk>=1.22
+boto3>=1.35
+colorama>=0.4.6
+cryptography>=42

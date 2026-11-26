@@ -1,0 +1,14 @@
+apiVersion: 1
+
+# Uses the AWS profile Grafana was started with (AWS_PROFILE) and assumes the project's
+# read-only role, so the dashboard can only read metrics and the project's log groups.
+datasources:
+  - name: CloudWatch (iot-project)
+    uid: iot-project-cloudwatch
+    type: cloudwatch
+    isDefault: true
+    editable: false
+    jsonData:
+      authType: default
+      assumeRoleArn: ${IOT_GRAFANA_ROLE_ARN}
+      defaultRegion: ${IOT_REGION}

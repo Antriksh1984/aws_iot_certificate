@@ -1,0 +1,1534 @@
+{
+  "uid": "iot-project",
+  "title": "IoT Certificate Security · iot-project",
+  "description": "Live view of the iot-project demo: fleet telemetry, blocked attacks, detection and quarantine.",
+  "tags": [
+    "iot-project",
+    "aws-iot",
+    "security"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "schemaVersion": 41,
+  "version": 1,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Per-device X.509 identity on AWS IoT Core\n**5 sensors + 1 rogue device**, emulated in Python, each with its **own certificate** (mutual TLS, port 8883).\n\n1. **Authenticate**: no valid certificate, no connection\n2. **Authorize**: a device may use only its own topics\n3. **Detect & respond**: misbehaviour → alert → automatic quarantine"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Telemetry messages stored",
+      "description": "Readings written to DynamoDB in the selected time range.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "namespace": "AWS/Lambda",
+          "metricName": "Invocations",
+          "dimensions": {
+            "FunctionName": "iot-project-telemetry-processor"
+          },
+          "statistic": "Sum",
+          "period": "60",
+          "matchExact": true,
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "id": "",
+          "expression": "",
+          "label": "Stored"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Blocked by AWS IoT",
+      "description": "Publish: denied by the device policy. Connect: wrong client ID or quarantined certificate. Bad cert: TLS rejected (self-signed, missing or mismatched certificate).",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "namespace": "AWS/IoT",
+          "metricName": "PublishIn.AuthError",
+          "dimensions": {
+            "Protocol": "MQTT"
+          },
+          "statistic": "Sum",
+          "period": "60",
+          "matchExact": true,
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "id": "",
+          "expression": "",
+          "label": "Publish"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "namespace": "AWS/IoT",
+          "metricName": "Connect.AuthError",
+          "dimensions": {
+            "Protocol": "MQTT"
+          },
+          "statistic": "Sum",
+          "period": "60",
+          "matchExact": true,
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "id": "",
+          "expression": "",
+          "label": "Connect"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "namespace": "AWS/IoT",
+          "metricName": "Connection.AuthNError",
+          "dimensions": {
+            "Protocol": "MQTT"
+          },
+          "statistic": "Sum",
+          "period": "60",
+          "matchExact": true,
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "id": "",
+          "expression": "",
+          "label": "Bad cert"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Violations detected",
+      "description": "Detector rule breaches (auth failures, reconnect storms, disconnects, oversized messages).",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "namespace": "iot-project",
+          "metricName": "DeviceViolations",
+          "dimensions": {},
+          "statistic": "Sum",
+          "period": "60",
+          "matchExact": true,
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "id": "",
+          "expression": "",
+          "label": "Violations"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "dark-orange"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Devices quarantined",
+      "description": "Certificates set INACTIVE with the deny-all policy attached.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "namespace": "iot-project",
+          "metricName": "DevicesQuarantined",
+          "dimensions": {},
+          "statistic": "Sum",
+          "period": "60",
+          "matchExact": true,
+          "metricQueryType": 0,
+          "metricEditorMode": 0,
+          "id": "",
+          "expression": "",
+          "label": "Quarantined"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "id": 6,
+      "title": "1 · Fleet telemetry: what good devices send",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 7,
+      "title": "Temperature by device (°C)",
+      "description": "Average temperature per device per minute, from the telemetry Lambda.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Logs",
+          "queryLanguage": "CWLI",
+          "region": "default",
+          "logGroupNames": [
+            "/aws/lambda/iot-project-telemetry-processor"
+          ],
+          "expression": "filter message = \"telemetry stored\"\n| stats avg(temperature) as avgCelsius by bin(1m), deviceId",
+          "id": "",
+          "statsGroups": [
+            "deviceId"
+          ]
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "displayName": "${__series.name}"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 8,
+      "title": "Messages stored per device per minute",
+      "description": "If a device goes quiet (e.g. the rogue after quarantine) its bars stop.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Logs",
+          "queryLanguage": "CWLI",
+          "region": "default",
+          "logGroupNames": [
+            "/aws/lambda/iot-project-telemetry-processor"
+          ],
+          "expression": "filter message = \"telemetry stored\"\n| stats count(*) as messages by bin(1m), deviceId",
+          "id": "",
+          "statsGroups": [
+            "deviceId"
+          ]
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "displayName": "${__series.name}"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "id": 9,
+      "title": "Latest reading per device",
+      "description": "One row per device: last reading and how many messages it sent in the time range.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Logs",
+          "queryLanguage": "CWLI",
+          "region": "default",
+          "logGroupNames": [
+            "/aws/lambda/iot-project-telemetry-processor"
+          ],
+          "expression": "filter message = \"telemetry stored\"\n| stats latest(temperature) as temperatureC, latest(humidity) as humidityPct, latest(pressure) as pressureHpa, count(*) as messages, max(@timestamp) as lastSeen by deviceId\n| sort deviceId asc",
+          "id": ""
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "id": 10,
+      "title": "2 · Attacks blocked by AWS IoT: authentication and least privilege",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Blocked per minute",
+      "description": "AWS IoT metrics. Denied subscribes are answered with SUBACK NOT_AUTHORIZED and are not counted by AWS.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.AuthError\" Protocol=\"MQTT\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "Publish denied (not its topic)",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/IoT,Protocol} MetricName=\"Connect.AuthError\" Protocol=\"MQTT\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "Connect denied (wrong client ID / quarantined)",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/IoT,Protocol} MetricName=\"Connection.AuthNError\" Protocol=\"MQTT\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "TLS rejected (no valid certificate)",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "id": 12,
+      "title": "What was blocked: AWS IoT log",
+      "description": "Every denied action. 'certificate' is the real identity; 'claimedClientId' is what the device said it was. A rogue certificate claiming to be sensor-001 shows sensor-001 here but the rogue's certificate.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 15,
+        "x": 9,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Logs",
+          "queryLanguage": "CWLI",
+          "region": "default",
+          "logGroupNames": [
+            "AWSIotLogsV2"
+          ],
+          "expression": "fields @timestamp, clientId as claimedClientId, eventType as action, topicName as topic, reason, substr(principalId, 0, 10) as certificate\n| filter status = \"Failure\"\n| sort @timestamp desc\n| limit 100",
+          "id": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__log__grafana_internal__": true,
+              "__logstream__grafana_internal__": true
+            },
+            "renameByName": {
+              "@timestamp": "time",
+              "Time": "time"
+            },
+            "indexByName": {
+              "@timestamp": 1,
+              "Time": 0,
+              "claimedClientId": 2,
+              "certificate": 3,
+              "action": 4,
+              "topic": 5,
+              "reason": 6
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reason"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "AUTHORIZATION_FAILURE": {
+                        "text": "DENIED by policy",
+                        "color": "red",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "certificate"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "action"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "id": 13,
+      "title": "3 · Detection and automatic response",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      }
+    },
+    {
+      "type": "table",
+      "id": 14,
+      "title": "Security timeline",
+      "description": "Detector violations and the quarantine Lambda's response, newest first. Quarantine = deny-all policy + certificate INACTIVE.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 32
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Logs",
+          "queryLanguage": "CWLI",
+          "region": "default",
+          "logGroupNames": [
+            "/aws/lambda/iot-project-detector",
+            "/aws/lambda/iot-project-quarantine"
+          ],
+          "expression": "fields @timestamp, message as event, thingName as device, coalesce(summary, reason) as detail, outcome\n| filter message in [\"violation detected\", \"device quarantined\", \"device already quarantined\"]\n| sort @timestamp desc\n| limit 50",
+          "id": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__log__grafana_internal__": true,
+              "__logstream__grafana_internal__": true
+            },
+            "renameByName": {
+              "@timestamp": "time",
+              "Time": "time"
+            },
+            "indexByName": {
+              "@timestamp": 1,
+              "Time": 0,
+              "event": 2,
+              "device": 3,
+              "detail": 4,
+              "outcome": 5
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "event"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "violation detected": {
+                        "text": "⚠ VIOLATION",
+                        "color": "orange",
+                        "index": 0
+                      },
+                      "device quarantined": {
+                        "text": "⛔ QUARANTINED",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "device already quarantined": {
+                        "text": "already quarantined",
+                        "color": "dark-red",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "outcome"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "quarantined": {
+                        "text": "quarantined",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "already-quarantined": {
+                        "text": "no-op (idempotent)",
+                        "color": "transparent",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "event"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "device"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "outcome"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 15,
+      "title": "Violations and quarantines",
+      "description": "Custom metrics from the detector and quarantine logs.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 32
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{iot-project} MetricName=\"DeviceViolations\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "Violations",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{iot-project} MetricName=\"DevicesQuarantined\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "Quarantines",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "id": 16,
+      "title": "4 · Platform health",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 17,
+      "title": "Lambda invocations",
+      "description": "Every function is invoked by an event source: IoT rules, SNS or EventBridge.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 10,
+        "x": 0,
+        "y": 42
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Invocations\" FunctionName=\"iot-project-telemetry-processor\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "telemetry-processor",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Invocations\" FunctionName=\"iot-project-detector\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "detector",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Invocations\" FunctionName=\"iot-project-quarantine\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "quarantine",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Invocations\" FunctionName=\"iot-project-cert-expiry\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "cert-expiry",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 18,
+      "title": "Lambda errors",
+      "description": "Should stay at zero. Alarms email the alert topic if not.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 7,
+        "x": 10,
+        "y": 42
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Errors\" FunctionName=\"iot-project-telemetry-processor\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "telemetry-processor",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Errors\" FunctionName=\"iot-project-detector\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "detector",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Errors\" FunctionName=\"iot-project-quarantine\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "quarantine",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Errors\" FunctionName=\"iot-project-cert-expiry\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "cert-expiry",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 19,
+      "title": "Successful connections",
+      "description": "Accepted MQTT connections and publishes.",
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "iot-project-cloudwatch"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 7,
+        "x": 17,
+        "y": 42
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/IoT,Protocol} MetricName=\"Connect.Success\" Protocol=\"MQTT\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "Connect OK",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "iot-project-cloudwatch"
+          },
+          "queryMode": "Metrics",
+          "region": "default",
+          "metricQueryType": 0,
+          "metricEditorMode": 1,
+          "expression": "FILL(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.Success\" Protocol=\"MQTT\"', 'Sum', 60), 0)",
+          "id": "",
+          "label": "Publish OK",
+          "period": "60",
+          "namespace": "",
+          "metricName": "",
+          "dimensions": {},
+          "statistic": "Sum",
+          "matchExact": true
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": []
+}

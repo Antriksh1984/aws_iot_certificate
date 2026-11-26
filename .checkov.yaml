@@ -1,0 +1,22 @@
+# Checkov config for CI. Each skip is a deliberate lab trade-off (budget < $5/month):
+framework:
+  - terraform
+skip-check:
+  # Customer-managed KMS keys cost $1/month each; AWS-owned keys encrypt the data at rest.
+  - CKV_AWS_119 # DynamoDB encrypted with a CMK
+  - CKV_AWS_158 # CloudWatch log group encrypted with KMS
+  - CKV_AWS_173 # Lambda environment variables encrypted with a CMK (they hold only resource names)
+  # SNS with a CMK would need a custom key; CloudWatch alarms cannot publish to topics
+  # encrypted with the AWS-managed alias/aws/sns key.
+  - CKV_AWS_26
+  # The spec requires 14-day log retention to keep cost down.
+  - CKV_AWS_338
+  # Lambdas call only AWS APIs; a VPC would need NAT gateway or interface endpoints (> $5/month).
+  - CKV_AWS_117
+  # The account's Lambda concurrency limit is 10, so nothing can be reserved per function.
+  - CKV_AWS_115
+  # Async sources (IoT rules, SNS) retry and failures alarm via CloudWatch; no DLQ for a lab.
+  - CKV_AWS_116
+  # Code signing and X-Ray tracing are out of scope for the demo.
+  - CKV_AWS_272
+  - CKV_AWS_50

@@ -1,0 +1,569 @@
+<title>iot-project Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: title + legend, scenario tabs, step bar, full-width schematic (scrolls sideways on phones), walkthrough below */
+:root {
+  --bg: #edf0f3;
+  --surface: #ffffff;
+  --zone: #f3f5f8;
+  --ink: #141b24;
+  --muted: #5b6877;
+  --rule: #c4ccd5;
+  --line: #8d99a6;
+  --data: #0b7a86;
+  --detect: #a5690f;
+  --respond: #c2352b;
+  --ops: #5b48b6;
+  --shadow: rgba(20, 27, 36, .16);
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, "Courier New", monospace;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1319; --surface: #151c24; --zone: #1a222c; --ink: #e3e8ee; --muted: #93a0ae;
+    --rule: #2f3a47; --line: #6c7988; --data: #3bbfcc; --detect: #e2a646; --respond: #f06a5d;
+    --ops: #a191f3; --shadow: rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1319; --surface: #151c24; --zone: #1a222c; --ink: #e3e8ee; --muted: #93a0ae;
+  --rule: #2f3a47; --line: #6c7988; --data: #3bbfcc; --detect: #e2a646; --respond: #f06a5d;
+  --ops: #a191f3; --shadow: rgba(0, 0, 0, .55); color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+.wrap {
+  max-width: 1320px; margin: 0 auto; display: grid; gap: 16px;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: end; justify-content: space-between; }
+header > div { min-width: 0; max-width: 72ch; }
+h1 { font: 600 30px/1.1 var(--cond); margin: 0 0 6px; text-wrap: balance; letter-spacing: -.01em; }
+header p { margin: 0; color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: .92em; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 22px; height: 0; border-top: 2px solid; display: inline-block; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab {
+  font: 500 13px var(--sans); padding: 6px 13px; border: 1px solid var(--rule); background: var(--surface);
+  color: var(--ink); border-radius: 999px; cursor: pointer;
+}
+.tab:hover { border-color: var(--line); }
+.tab[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+button:focus-visible, .step:focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+
+.stepbar {
+  display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; min-height: 66px;
+}
+.ctrls { display: flex; gap: 6px; align-items: center; }
+.ctrls button {
+  width: 34px; height: 34px; border: 1px solid var(--rule); background: var(--zone); color: var(--ink);
+  border-radius: 8px; cursor: pointer; font: 600 14px var(--sans); display: grid; place-items: center;
+}
+.ctrls button:disabled { opacity: .35; cursor: default; }
+.ctrls .count { font: 500 12px var(--mono); color: var(--muted); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+.steptext { min-width: 0; }
+.steptext .cmd { font: 500 11.5px var(--mono); color: var(--muted); display: block; margin-bottom: 2px; overflow-wrap: anywhere; }
+.steptext p { margin: 0; max-width: 95ch; }
+
+.canvas { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow-x: auto; }
+.inner { position: relative; min-width: 1000px; }
+.inner svg { display: block; width: 100%; height: auto; }
+
+/* schematic */
+.frame { fill: var(--zone); stroke: var(--rule); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.flabel { font: 500 10px var(--mono); letter-spacing: .1em; fill: var(--muted); }
+.chead { font: 600 11.5px var(--sans); fill: var(--muted); }
+.node { cursor: pointer; transition: opacity .25s; }
+.node .box { fill: var(--surface); stroke: var(--rule); stroke-width: 1.2; transition: stroke .2s; }
+.node:hover .box { stroke: var(--line); }
+.node:focus { outline: none; }
+.node:focus-visible .box { stroke: var(--data); stroke-width: 2.2; }
+.node.active .box { stroke: var(--ink); stroke-width: 2.2; }
+.node.open .box { stroke: var(--data); stroke-width: 2.2; }
+.k { font: 500 8.5px var(--mono); letter-spacing: .09em; fill: var(--muted); }
+.t { font: 600 13px var(--sans); fill: var(--ink); }
+.s { font: 400 10px var(--mono); fill: var(--muted); }
+.edge { transition: opacity .25s; }
+.edge .ln { fill: none; stroke-width: 1.6; stroke-linejoin: round; }
+.edge .lbl { font: 500 10px var(--mono); paint-order: stroke; stroke: var(--zone); stroke-width: 4px; stroke-linejoin: round; }
+.edge .lbl.out { stroke: var(--surface); }
+.data .ln { stroke: var(--data); }      .data .lbl { fill: var(--data); }
+.detect .ln { stroke: var(--detect); }  .detect .lbl { fill: var(--detect); }
+.respond .ln { stroke: var(--respond); } .respond .lbl { fill: var(--respond); }
+.ops .ln { stroke: var(--ops); }        .ops .lbl { fill: var(--ops); }
+.m-data { fill: var(--data); } .m-detect { fill: var(--detect); } .m-respond { fill: var(--respond); } .m-ops { fill: var(--ops); }
+.x-respond { stroke: var(--respond); stroke-width: 2.2; fill: none; }
+.dim { opacity: .13; }
+.edge.flow .ln { stroke-width: 2.6; stroke-dasharray: 7 5; animation: flow .8s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -12; } }
+@media (prefers-reduced-motion: reduce) {
+  .edge.flow .ln { animation: none; stroke-dasharray: none; stroke-width: 3; }
+  .node, .edge { transition: none; }
+}
+
+/* component popover */
+.pop {
+  position: absolute; z-index: 5; width: 330px; max-width: calc(100% - 24px);
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+  box-shadow: 0 12px 32px var(--shadow); padding: 14px 16px 16px;
+}
+.pop .k2 { font: 500 10px var(--mono); letter-spacing: .1em; color: var(--muted); }
+.pop h3 { font: 600 17px/1.25 var(--sans); margin: 2px 28px 8px 0; overflow-wrap: anywhere; }
+.pop p { margin: 0 0 10px; }
+.pop dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 10px; font-size: 12.5px; }
+.pop dt { color: var(--muted); }
+.pop dd { margin: 0; font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere; min-width: 0; }
+.pop .src { font: 400 11.5px var(--mono); color: var(--muted); border-top: 1px solid var(--rule); padding-top: 8px; overflow-wrap: anywhere; }
+.pop .x {
+  position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid var(--rule); background: var(--zone); color: var(--ink); cursor: pointer; font: 500 15px var(--sans);
+}
+@media (max-width: 720px) {
+  .pop { position: fixed; left: 12px !important; right: 12px; top: auto !important; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: auto; max-width: none; max-height: 60vh; overflow-y: auto; }
+}
+
+/* walkthrough */
+.below { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .below { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.panel h2 { font: 600 13px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+.step {
+  display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid transparent; color: var(--ink);
+}
+.step:hover { background: var(--zone); }
+.step.cur { background: var(--zone); border-color: var(--rule); }
+.step b { font: 600 12px var(--mono); color: var(--muted); padding-top: 1px; }
+.step.cur b { color: var(--ink); }
+.step span { min-width: 0; }
+.facts { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 13px; }
+.facts li { display: grid; gap: 1px; }
+.facts strong { font-weight: 600; }
+.facts span { color: var(--muted); }
+footer { color: var(--muted); font-size: 12px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>iot-project architecture</h1>
+      <p>Per-device X.509 identity on AWS IoT Core. Pick a scenario to trace its path step by step, or click any component to see what it does and where it lives in the repo.</p>
+    </div>
+    <div class="legend" aria-label="Arrow colours">
+      <span><i style="border-color:var(--data)"></i>Telemetry path</span>
+      <span><i style="border-color:var(--detect)"></i>Detection signals</span>
+      <span><i style="border-color:var(--respond)"></i>Alerts &amp; response</span>
+      <span><i style="border-color:var(--ops)"></i>Schedules, monitoring, operator</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Scenarios"></nav>
+
+  <section class="stepbar" aria-live="polite">
+    <div class="ctrls">
+      <button id="prev" type="button" aria-label="Previous step">&#8249;</button>
+      <button id="play" type="button" aria-label="Play steps">&#9654;</button>
+      <button id="next" type="button" aria-label="Next step">&#8250;</button>
+      <span class="count" id="count">&ndash;</span>
+    </div>
+    <div class="steptext"><span class="cmd" id="cmd"></span><p id="stext"></p></div>
+  </section>
+
+  <div class="canvas"><div class="inner" id="inner"></div></div>
+
+  <div class="below">
+    <section class="panel"><h2 id="wtitle">How the pieces fit</h2><ol class="steps" id="steps"></ol></section>
+    <section class="panel">
+      <h2>Thresholds</h2>
+      <ul class="facts">
+        <li><strong>Window</strong><span>Fixed 5-minute buckets, one violation per device, rule and window</span></li>
+        <li><strong>Auth failures &gt; 5</strong><span>Denied publishes and connects from AWSIotLogsV2</span></li>
+        <li><strong>Connection attempts &gt; 10</strong><span>connected + connect_failed lifecycle events</span></li>
+        <li><strong>Disconnects &gt; 5</strong><span>disconnected lifecycle events</span></li>
+        <li><strong>Message &gt; 1024 bytes</strong><span>Any single message, no window</span></li>
+        <li><strong>Cert expiry &le; 30 days</strong><span>Weekly Lambda and daily audit</span></li>
+      </ul>
+    </section>
+  </div>
+  <footer>Drawn from <code>infra/*.tf</code>, <code>lambdas/*.py</code> and <code>emulator/emulator.py</code>. Region ap-south-1; every resource is Terraform-managed.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------- components
+  var NODES = [
+    { id: "sensors", x: 24, y: 96, w: 160, h: 52, k: "EMULATOR", t: "sensor-001 … 005", s: ["own X.509 cert each"],
+      d: "Five well-behaved emulated industrial sensors (awsiotsdk, MQTT 5). Each connects with its own AWS-issued certificate and its thing name as client ID, subscribes to its own commands topic and publishes temperature, humidity and pressure.",
+      f: [["Publishes", "sensors/<thing>/telemetry"], ["Interval", "60 s (--interval)"], ["Run", "python emulator.py fleet"]], src: "emulator/emulator.py · infra/iot_identity.tf" },
+    { id: "rogue", x: 24, y: 162, w: 160, h: 52, k: "EMULATOR", t: "rogue-001", s: ["own cert, misbehaves"],
+      d: "Provisioned exactly like a sensor, with its own certificate and the same sensor policy. The rogue and stolen-cert scenarios make it send 4 KB payloads, hit forbidden topics, impersonate sensor-001 and churn connections.",
+      f: [["Run", "python emulator.py rogue"], ["Then", "python emulator.py stolen-cert"]], src: "emulator/emulator.py" },
+    { id: "attacker", x: 24, y: 228, w: 160, h: 52, k: "EMULATOR", t: "no-cert client", s: ["fails TLS handshake"],
+      d: "Three attempts that never get past TLS: a self-signed certificate, no client certificate at all, and a real certificate paired with the wrong private key.",
+      f: [["Run", "python emulator.py no-cert"], ["Metric", "Connection.AuthNError"]], src: "emulator/emulator.py" },
+    { id: "operator", x: 24, y: 552, w: 160, h: 52, k: "EMULATOR", t: "operator CLI", s: ["status · quarantine"],
+      d: "Operator commands that use your own AWS credentials through boto3. status shows each certificate, its policies, recent telemetry and security events. quarantine invokes the quarantine Lambda directly. reset re-activates a certificate, restores the sensor policy and clears the detector's counters.",
+      f: [["Status", "emulator.py status"], ["Quarantine", "emulator.py quarantine rogue-001"], ["Undo", "emulator.py reset rogue-001"]], src: "emulator/emulator.py · Makefile" },
+    { id: "grafana", x: 24, y: 668, w: 160, h: 60, k: "LOCAL GRAFANA", t: "Grafana", s: ["127.0.0.1:3000"],
+      d: "Grafana 13.2.4 portable, anonymous read-only viewing, refreshing every 10 s. It uses your AWS profile only to assume iot-project-grafana-readonly, which can read CloudWatch metrics and the project's log groups and nothing else.",
+      f: [["Kiosk", "/d/iot-project?kiosk"], ["Panels", "generated by build_dashboard.py"]], src: "grafana/ · infra/grafana.tf" },
+
+    { id: "broker", x: 270, y: 96, w: 240, h: 184, k: "AWS IOT CORE", t: "MQTT broker", s: ["mutual TLS · port 8883", "iot-project-sensor-policy", "one session per client ID"],
+      d: "Authenticates every device by its certificate during the TLS handshake, then checks the sensor policy on every action. A device may connect only with its own thing name as client ID and only if its certificate is attached to that thing. It may publish only to its own telemetry and status topics, subscribe only to its own commands and config, and touch only its own shadow.",
+      f: [["Things", "6, in group iot-project-sensors"], ["Policy var", "iot:Connection.Thing.ThingName"], ["Quarantine", "explicit Deny iot:*"]], src: "infra/iot_identity.tf · infra/iot_policies.tf" },
+    { id: "tRule", x: 300, y: 300, w: 210, h: 52, k: "IOT RULE", t: "telemetry rule", s: ["sensors/+/telemetry"],
+      d: "Adds the device ID from the topic and a server timestamp, then invokes telemetry-processor. Failed rule actions go to /aws/iot/iot-project-rule-errors.",
+      f: [["Name", "iot_project_telemetry"], ["SQL", "SELECT *, topic(2) AS deviceId, timestamp() AS ts"]], src: "infra/data_path.tf" },
+    { id: "lRule", x: 300, y: 362, w: 210, h: 52, k: "IOT RULE", t: "lifecycle rule", s: ["$aws/events/presence/+/+"],
+      d: "Forwards connected, connect_failed and disconnected events for client IDs starting with iot-project- to the detector, including the certificate (principalIdentifier) and the disconnect reason.",
+      f: [["Name", "iot_project_lifecycle_events"], ["Feeds", "connection attempts, disconnects"]], src: "infra/defender.tf" },
+    { id: "sRule", x: 300, y: 424, w: 210, h: 52, k: "IOT RULE", t: "oversized-message rule", s: ["sensors/# · > ~1 KB only"],
+      d: "Passes on only messages whose base64 length exceeds 4·floor(1024/3), so normal telemetry never invokes the detector. The detector then checks the exact byte size.",
+      f: [["Name", "iot_project_oversized_messages"], ["Feeds", "message byte size"]], src: "infra/defender.tf" },
+    { id: "logs", x: 300, y: 486, w: 210, h: 52, k: "CLOUDWATCH LOGS", t: "AWSIotLogsV2", s: ["WARN · streamed to detector"],
+      d: "AWS IoT logs at WARN, which captures every denied publish and failed connect. A subscription filter on status = Failure streams them to the detector. AWS does not log denied MQTT 5 subscribes; only the device sees SUBACK NOT_AUTHORIZED.",
+      f: [["Filter", "{ $.status = \"Failure\" }"], ["Retention", "14 days"], ["Feeds", "authorization failures"]], src: "infra/monitoring.tf · infra/defender.tf" },
+    { id: "audit", x: 270, y: 620, w: 240, h: 52, k: "DEVICE DEFENDER", t: "daily audit", s: ["7 account checks"],
+      d: "Scheduled daily audit: certificate expiring (30 days), certificate shared, overly permissive policy, logging disabled, conflicting client IDs, revoked certificate still active, key quality. Device Defender Detect is not used: it closed to new customers on 31 Aug 2026, and the real security profile sits behind enable_device_defender_detect = false.",
+      f: [["Schedule", "iot-project-daily-audit"], ["Role", "AWSIoTDeviceDefenderAudit"]], src: "infra/defender.tf" },
+
+    { id: "eb", x: 580, y: 96, w: 170, h: 40, k: "EVENTBRIDGE", t: "rate(7 days)", s: [],
+      d: "A schedule rule that invokes the cert-expiry Lambda once a week.",
+      f: [["Rule", "iot-project-cert-expiry-weekly"]], src: "infra/response.tf" },
+    { id: "certexp", x: 580, y: 150, w: 170, h: 52, k: "LAMBDA", t: "cert-expiry", s: ["≤ 30 days → report"],
+      d: "Lists every certificate that is not revoked, works out the days remaining, and publishes a summary to the alert topic when any expire within 30 days.",
+      f: [["Threshold", "THRESHOLD_DAYS = 30"], ["Runtime", "Python 3.12 · arm64"]], src: "lambdas/cert_expiry.py · infra/response.tf" },
+    { id: "tproc", x: 580, y: 300, w: 170, h: 52, k: "LAMBDA", t: "telemetry-processor", s: ["validate → PutItem"],
+      d: "Requires deviceId, ts and at least one numeric reading (temperature, humidity, pressure). Invalid payloads are logged and dropped, never retried. Valid readings are stored, and also logged as numbers so Grafana can chart them with Logs Insights.",
+      f: [["Writes", "iot-project-telemetry"], ["Runtime", "Python 3.12 · arm64 · 128 MB"]], src: "lambdas/telemetry_processor.py · infra/data_path.tf" },
+    { id: "detector", x: 580, y: 362, w: 170, h: 176, k: "LAMBDA", t: "detector", s: ["auth failures > 5", "connect attempts > 10", "disconnects > 5", "message > 1024 B", "", "per device · 5-min window"],
+      d: "Stands in for Device Defender Rules Detect. It turns three input shapes into observations and charges each one to the thing that owns the certificate (iot:ListPrincipalThings), not to the client ID the device claims. It increments a counter per window, and when a counter crosses its limit, exactly once per window, it records a VIOLATION and publishes a Defender-format in-alarm message.",
+      f: [["Inputs", "lifecycle rule, size rule, IoT log"], ["Counters", "iot-project-device-metrics"], ["Output", "SNS violationEventType = in-alarm"]], src: "lambdas/detector.py · infra/defender.tf" },
+    { id: "quarantine", x: 580, y: 562, w: 170, h: 72, k: "LAMBDA", t: "quarantine", s: ["attach deny-all policy", "cert → INACTIVE"],
+      d: "Invoked by SNS only for in-alarm violations, or directly with a thingName and reason. Refuses things outside iot-project-. Attaches the deny-all policy first, then detaches every other policy and sets the certificate INACTIVE. Every step is idempotent, and a failure fails the invocation so it retries.",
+      f: [["Records", "QUARANTINE in security-events"], ["Lag", "~1 s; IoT refuses the cert within ~20 s"]], src: "lambdas/quarantine.py · infra/response.tf" },
+
+    { id: "ttable", x: 830, y: 300, w: 170, h: 52, k: "DYNAMODB", t: "telemetry", s: ["PK deviceId · SK ts"],
+      d: "Stored sensor readings. On-demand billing with point-in-time recovery; items expire after 30 days.",
+      f: [["Table", "iot-project-telemetry"], ["TTL", "expiresAt, 30 days"]], src: "infra/data_path.tf" },
+    { id: "metrics", x: 830, y: 378, w: 170, h: 52, k: "DYNAMODB", t: "device-metrics", s: ["count / device / window"],
+      d: "One counter item per device, metric and 5-minute window, incremented atomically by the detector. Items expire after a day; emulator.py reset deletes them so a reset device does not re-trip a rule.",
+      f: [["Table", "iot-project-device-metrics"], ["Key", "deviceId + metric#windowStart"]], src: "infra/defender.tf" },
+    { id: "secev", x: 830, y: 488, w: 170, h: 56, k: "DYNAMODB", t: "security-events", s: ["VIOLATION · QUARANTINE"],
+      d: "Audit trail of every violation and quarantine. Writes are conditional on the event ID, so SNS redelivery and retries never create duplicates.",
+      f: [["Table", "iot-project-security-events"], ["Index", "deviceId-timestamp-index"], ["TTL", "30 days"]], src: "infra/response.tf" },
+
+    { id: "sns", x: 1050, y: 426, w: 210, h: 72, k: "SNS", t: "security-alerts", s: ["one topic for every alert", "2 subscriptions"],
+      d: "Receives detector violations, audit findings, certificate-expiry reports and CloudWatch alarms. The email subscription gets everything. The quarantine Lambda's subscription has a message-body filter, so only violationEventType = in-alarm invokes it.",
+      f: [["Topic", "iot-project-security-alerts"], ["Filter", "{ violationEventType: [in-alarm] }"]], src: "infra/defender.tf · infra/response.tf" },
+    { id: "email", x: 1130, y: 300, w: 130, h: 52, k: "EMAIL", t: "alert_email", s: ["your inbox"],
+      d: "Set in terraform.tfvars. AWS sends a subscription confirmation after deploy; nothing arrives until you click it. Quarantine works either way, because it has its own subscription.",
+      f: [["Budget", "$5/month, emails at 50% and 100%"]], src: "infra/variables.tf · infra/budget.tf" },
+    { id: "cw", x: 1050, y: 662, w: 210, h: 72, k: "CLOUDWATCH", t: "dashboard + alarms", s: ["2 metric filters", "Connect.AuthError, Lambda errors"],
+      d: "Dashboard iot-project-dashboard with connects, blocked actions, violations, quarantines and Lambda health. Metric filters turn the Lambda log lines into DeviceViolations and DevicesQuarantined. Alarms fire on more than 5 rejected connects in 5 minutes and on any error from the four Lambdas.",
+      f: [["Dashboard", "iot-project-dashboard"], ["Alarm action", "security-alerts topic"]], src: "infra/monitoring.tf" }
+  ];
+
+  // ---------------------------------------------------------------- arrows
+  var EDGES = [
+    { id: "s-b", c: "data", d: "M184,122 H270", l: "telemetry", lx: 227, ly: 116, out: true },
+    { id: "r-b", c: "detect", d: "M184,188 H270", l: "misuse", lx: 227, ly: 182, out: true },
+    { id: "a-b", c: "respond", d: "M184,254 H266", l: "TLS rejected", lx: 225, ly: 248, out: true, x: true },
+    { id: "b-tr", c: "data", d: "M284,280 V326 H300" },
+    { id: "b-lr", c: "detect", d: "M284,280 V388 H300" },
+    { id: "b-sr", c: "detect", d: "M284,280 V450 H300" },
+    { id: "b-lg", c: "detect", d: "M284,280 V512 H300" },
+    { id: "tr-tp", c: "data", d: "M510,326 H580" },
+    { id: "tp-tt", c: "data", d: "M750,326 H830", l: "PutItem", lx: 790, ly: 320 },
+    { id: "lr-d", c: "detect", d: "M510,388 H580" },
+    { id: "sr-d", c: "detect", d: "M510,450 H580" },
+    { id: "lg-d", c: "detect", d: "M510,512 H580" },
+    { id: "d-m", c: "detect", d: "M750,404 H830", l: "count", lx: 790, ly: 398 },
+    { id: "d-se", c: "detect", d: "M750,506 H830", l: "VIOLATION", lx: 790, ly: 500 },
+    { id: "d-sns", c: "respond", d: "M750,462 H1050", l: "in-alarm violation", lx: 915, ly: 456 },
+    { id: "sns-em", c: "respond", d: "M1195,426 V352", l: "email", lx: 1201, ly: 393, a: "start" },
+    { id: "sns-q", c: "respond", d: "M1050,490 H1025 V612 H750", l: "filter: in-alarm", lx: 888, ly: 606 },
+    { id: "q-b", c: "respond", d: "M580,618 H545 V190 H510", l: "deny-all · INACTIVE", lx: 557, ly: 258, rot: true },
+    { id: "q-se", c: "respond", d: "M750,578 H790 V530 H830" },
+    { id: "eb-ce", c: "ops", d: "M665,136 V150" },
+    { id: "ce-sns", c: "ops", d: "M750,176 H1080 V426", l: "if expiring ≤ 30 d", lx: 915, ly: 170 },
+    { id: "au-sns", c: "ops", d: "M510,646 H1100 V498", l: "audit findings", lx: 800, ly: 640 },
+    { id: "cw-sns", c: "ops", d: "M1220,662 V498", l: "alarm", lx: 1226, ly: 584, a: "start" },
+    { id: "gf-cw", c: "ops", d: "M104,728 V758 H1155 V734", l: "assume read-only role · query", lx: 640, ly: 752, out: true },
+    { id: "op-q", c: "ops", d: "M184,578 H580", l: "invoke (manual)", lx: 390, ly: 572 }
+  ];
+
+  // ---------------------------------------------------------------- scenarios
+  var SCEN = [
+    { id: "telemetry", name: "Healthy telemetry", cmd: "python emulator.py fleet", steps: [
+      { t: "Each sensor opens MQTT 5 over mutual TLS with its own certificate and its thing name as client ID. The sensor policy lets it publish only to sensors/<self>/telemetry and /status.", n: ["sensors", "broker"], e: ["s-b"] },
+      { t: "The telemetry rule matches sensors/+/telemetry and adds deviceId = topic(2) and ts = timestamp().", n: ["broker", "tRule"], e: ["b-tr"] },
+      { t: "The rule invokes telemetry-processor, which needs deviceId, ts and at least one numeric reading. Anything else is logged and dropped without a retry.", n: ["tRule", "tproc"], e: ["tr-tp"] },
+      { t: "Valid readings go into iot-project-telemetry (PK deviceId, SK ts) and expire after 30 days. The Lambda also logs them so Grafana can chart them.", n: ["tproc", "ttable"], e: ["tp-tt"] }
+    ]},
+    { id: "least-privilege", name: "Least privilege", cmd: "python emulator.py cross-topic sensor-002", steps: [
+      { t: "sensor-002 publishes to its own telemetry topic and gets PUBACK SUCCESS.", n: ["sensors", "broker"], e: ["s-b"] },
+      { t: "It then tries sensor-001's telemetry, shadow and commands and the sensors/# wildcard. Every check against the sensor policy fails with NOT_AUTHORIZED. Connecting with client ID sensor-001 is refused, because the certificate isn't attached to that thing.", n: ["sensors", "broker"], e: ["s-b"] },
+      { t: "Denied publishes and connects are written to AWSIotLogsV2. AWS doesn't log denied subscribes; only the device sees those.", n: ["broker", "logs"], e: ["b-lg"] },
+      { t: "The subscription filter streams the failures to the detector, which charges them to sensor-002's certificate. One run makes 5 denied attempts and the limit is more than 5, so nothing fires. A second run within 5 minutes would quarantine sensor-002.", n: ["logs", "detector", "metrics"], e: ["lg-d", "d-m"] }
+    ]},
+    { id: "no-cert", name: "No certificate", cmd: "python emulator.py no-cert", steps: [
+      { t: "Three attempts: a self-signed certificate, no client certificate, and a valid certificate with the wrong private key.", n: ["attacker", "broker"], e: ["a-b"] },
+      { t: "All three fail in the TLS handshake, before MQTT starts, so no policy is ever evaluated and no thing is involved. CloudWatch counts them as Connection.AuthNError.", n: ["broker", "cw"], e: [] }
+    ]},
+    { id: "rogue", name: "Rogue device", cmd: "python emulator.py rogue", steps: [
+      { t: "rogue-001 connects with its own certificate and publishes three 4 KB messages to its own telemetry topic. The policy allows the topic; the size is the problem.", n: ["rogue", "broker"], e: ["r-b"] },
+      { t: "The oversized-message rule forwards only payloads over ~1 KB, so the detector sees this one and confirms it breaks the 1024-byte limit.", n: ["broker", "sRule", "detector"], e: ["b-sr", "sr-d"] },
+      { t: "The detector maps the certificate to its thing with ListPrincipalThings, so traffic is charged to rogue-001 even when it claims to be sensor-001. It increments that device's counter for this rule and window.", n: ["detector", "metrics"], e: ["d-m"] },
+      { t: "On the first breach it writes a VIOLATION row (a conditional put, so retries can't duplicate it) and publishes a Defender-format in-alarm message to the alert topic.", n: ["detector", "secev", "sns"], e: ["d-se", "d-sns"] },
+      { t: "SNS emails you. Its filter policy passes only in-alarm messages to the quarantine Lambda.", n: ["sns", "email", "quarantine"], e: ["sns-em", "sns-q"] },
+      { t: "Quarantine attaches the deny-all policy, detaches the sensor policy, sets the certificate INACTIVE and records QUARANTINE, about 6 s after the first oversized message.", n: ["quarantine", "broker", "secev"], e: ["q-b", "q-se"] },
+      { t: "Meanwhile the forbidden topics, impersonation and reconnect storm feed the auth-failure and connection counters. Within ~20 s AWS IoT refuses the deactivated certificate and the storm's connects start failing. The five sensors carry on.", n: ["rogue", "broker", "lRule", "logs", "detector"], e: ["r-b", "b-lr", "b-lg", "lr-d", "lg-d"] }
+    ]},
+    { id: "stolen-cert", name: "Stolen certificate", cmd: "python emulator.py reset rogue-001  →  python emulator.py stolen-cert", steps: [
+      { t: "Two clients connect with rogue-001's certificate and the same client ID. AWS IoT allows one session per client ID, so each connect kicks the other off (SESSION_TAKEN_OVER).", n: ["rogue", "broker"], e: ["r-b"] },
+      { t: "Every kick produces a disconnected lifecycle event with reason DUPLICATE_CLIENTID, which the lifecycle rule forwards to the detector.", n: ["broker", "lRule", "detector"], e: ["b-lr", "lr-d"] },
+      { t: "The sixth disconnect in the window crosses the limit of 5 and raises a violation.", n: ["detector", "metrics", "secev", "sns"], e: ["d-m", "d-se", "d-sns"] },
+      { t: "The device is quarantined again by the same path. A thief who tries a different client ID is refused by the policy anyway.", n: ["sns", "quarantine", "broker", "secev"], e: ["sns-q", "q-b", "q-se"] },
+      { t: "The daily audit also flags this with DEVICE_CERTIFICATE_SHARED_CHECK and CONFLICTING_CLIENT_IDS_CHECK.", n: ["audit", "sns"], e: ["au-sns"] }
+    ]},
+    { id: "scheduled", name: "Scheduled checks", cmd: "EventBridge rate(7 days) · daily scheduled audit", steps: [
+      { t: "Every 7 days EventBridge invokes cert-expiry.", n: ["eb", "certexp"], e: ["eb-ce"] },
+      { t: "It lists every certificate that isn't revoked. If any expire within 30 days it publishes a summary to the alert topic, which emails you.", n: ["certexp", "sns", "email"], e: ["ce-sns", "sns-em"] },
+      { t: "Device Defender Audit runs 7 account checks daily and sends findings to the same topic. Neither message is an in-alarm violation, so the quarantine filter ignores both.", n: ["audit", "sns", "email"], e: ["au-sns", "sns-em"] }
+    ]},
+    { id: "monitoring", name: "Monitoring", cmd: "powershell -File grafana/start.ps1", steps: [
+      { t: "Local Grafana assumes iot-project-grafana-readonly, which can read CloudWatch metrics and the project's log groups only.", n: ["grafana", "cw"], e: ["gf-cw"] },
+      { t: "It charts IoT metrics (Connect.Success, PublishIn.AuthError, Connection.AuthNError), Logs Insights queries over the Lambda logs, and the DeviceViolations and DevicesQuarantined metric filters.", n: ["grafana", "cw", "logs"], e: ["gf-cw"] },
+      { t: "Alarms on Connect.AuthError (more than 5 in 5 minutes) and on any Lambda error publish to the alert topic and reach your inbox.", n: ["cw", "sns", "email"], e: ["cw-sns", "sns-em"] }
+    ]},
+    { id: "manual", name: "Manual quarantine & reset", cmd: "python emulator.py quarantine rogue-001 --reason \"demo\"", steps: [
+      { t: "The operator CLI invokes the quarantine Lambda directly with a thingName and reason.", n: ["operator", "quarantine"], e: ["op-q"] },
+      { t: "It runs the same isolation steps as the automatic path and records the event with source = manual.", n: ["quarantine", "broker", "secev"], e: ["q-b", "q-se"] },
+      { t: "emulator.py reset rogue-001 re-attaches the sensor policy, removes the quarantine policy, sets the certificate ACTIVE and deletes the detector's counters. Terraform ignores certificate status, so a later apply never undoes a quarantine.", n: ["operator", "broker", "metrics"], e: [] }
+    ]}
+  ];
+
+  var OVERVIEW = [
+    ["telemetry", "Identity: every device has its own certificate, and the broker rejects anything else at the TLS handshake."],
+    ["least-privilege", "Least privilege: the sensor policy pins each device to its own client ID, topics and shadow."],
+    ["telemetry", "Data path: telemetry rule → telemetry-processor → DynamoDB."],
+    ["rogue", "Detection: the detector Lambda counts four behaviours per certificate in 5-minute windows."],
+    ["rogue", "Response: one SNS topic feeds your inbox and, filtered to in-alarm, the quarantine Lambda, which closes the loop back at the broker."],
+    ["scheduled", "Hygiene: a weekly expiry check and a daily Device Defender audit report to the same topic."]
+  ];
+
+  // ---------------------------------------------------------------- render
+  function esc(v) { return String(v).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var byId = {};
+  NODES.forEach(function (n) { byId[n.id] = n; });
+
+  function marker(c) {
+    return '<marker id="a-' + c + '" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto">' +
+      '<path class="m-' + c + '" d="M0,0.5 L10,5 L0,9.5 z"/></marker>';
+  }
+
+  function render() {
+    var W = 1284, H = 774, h = [];
+    h.push('<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Architecture of iot-project: emulated devices on your machine connect over mutual TLS to AWS IoT Core; IoT rules route telemetry to a Lambda and DynamoDB, and feed lifecycle events, oversized messages and authorization-failure logs to a detector Lambda; violations go to an SNS topic that emails you and triggers a quarantine Lambda, which attaches a deny-all policy and deactivates the certificate at the broker." xmlns="http://www.w3.org/2000/svg">');
+    h.push("<defs>" + ["data", "detect", "respond", "ops"].map(marker).join("") +
+      '<marker id="x-respond" viewBox="0 0 12 12" refX="6" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path class="x-respond" d="M2,2 L10,10 M10,2 L2,10"/></marker></defs>');
+
+    h.push('<rect class="frame" x="10" y="28" width="186" height="716" rx="12"/>');
+    h.push('<text class="flabel" x="24" y="52">YOUR MACHINE</text>');
+    h.push('<rect class="frame" x="244" y="28" width="1028" height="716" rx="12"/>');
+    h.push('<text class="flabel" x="270" y="52">AWS ACCOUNT · ap-south-1 · TERRAFORM-MANAGED</text>');
+    [["emulator/", 24], ["IoT Core", 270], ["Lambda + schedule", 580], ["DynamoDB", 830], ["Alerting & monitoring", 1050]].forEach(function (c) {
+      h.push('<text class="chead" x="' + c[1] + '" y="80">' + esc(c[0]) + "</text>");
+    });
+
+    EDGES.forEach(function (e) {
+      h.push('<g class="edge ' + e.c + '" id="e-' + e.id + '">');
+      h.push('<path class="ln" d="' + e.d + '" marker-end="url(#' + (e.x ? "x-respond" : "a-" + e.c) + ')"/>');
+      if (e.l) {
+        var tr = e.rot ? ' transform="rotate(-90 ' + e.lx + " " + e.ly + ')"' : "";
+        h.push('<text class="lbl' + (e.out ? " out" : "") + '" x="' + e.lx + '" y="' + e.ly + '" text-anchor="' + (e.a || "middle") + '"' + tr + ">" + esc(e.l) + "</text>");
+      }
+      h.push("</g>");
+    });
+
+    NODES.forEach(function (n) {
+      h.push('<g class="node" id="n-' + n.id + '" data-id="' + n.id + '" tabindex="0" role="button" aria-label="' + esc(n.t + ", " + n.k.toLowerCase() + ". Show details") + '">');
+      h.push('<rect class="box" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="7"/>');
+      h.push('<text class="k" x="' + (n.x + 12) + '" y="' + (n.y + 15) + '">' + esc(n.k) + "</text>");
+      h.push('<text class="t" x="' + (n.x + 12) + '" y="' + (n.y + 31) + '">' + esc(n.t) + "</text>");
+      n.s.forEach(function (s, i) {
+        if (s) h.push('<text class="s" x="' + (n.x + 12) + '" y="' + (n.y + 46 + i * 14) + '">' + esc(s) + "</text>");
+      });
+      h.push("</g>");
+    });
+    h.push("</svg>");
+    inner.innerHTML = h.join("") + '<div class="pop" id="pop" hidden role="dialog" aria-modal="false" aria-labelledby="pop-title"></div>';
+  }
+
+  var inner = document.getElementById("inner");
+  render();
+  var pop = document.getElementById("pop");
+
+  // ---------------------------------------------------------------- state
+  var scen = -1, step = 0, timer = null, openId = null;
+  var tabs = document.getElementById("tabs");
+  var stepsEl = document.getElementById("steps");
+
+  tabs.innerHTML = '<button class="tab" type="button" data-i="-1">Overview</button>' +
+    SCEN.map(function (s, i) { return '<button class="tab" type="button" data-i="' + i + '">' + esc(s.name) + "</button>"; }).join("");
+
+  function union(list, key) {
+    var o = {};
+    list.forEach(function (st) { st[key].forEach(function (x) { o[x] = true; }); });
+    return o;
+  }
+
+  function apply() {
+    var S = scen >= 0 ? SCEN[scen] : null;
+    var inN = S ? union(S.steps, "n") : null, inE = S ? union(S.steps, "e") : null;
+    var cur = S ? S.steps[step] : null;
+    var curN = {}, curE = {};
+    if (cur) { cur.n.forEach(function (x) { curN[x] = true; }); cur.e.forEach(function (x) { curE[x] = true; }); }
+
+    NODES.forEach(function (n) {
+      var el = document.getElementById("n-" + n.id);
+      el.classList.toggle("dim", !!S && !curN[n.id] && !inN[n.id]);
+      el.classList.toggle("active", !!curN[n.id]);
+    });
+    EDGES.forEach(function (e) {
+      var el = document.getElementById("e-" + e.id);
+      el.classList.toggle("dim", !!S && !curE[e.id] && !inE[e.id]);
+      el.classList.toggle("flow", !!curE[e.id]);
+    });
+
+    Array.prototype.forEach.call(tabs.children, function (b) { b.setAttribute("aria-pressed", String(+b.dataset.i === scen)); });
+
+    var prev = document.getElementById("prev"), next = document.getElementById("next"), play = document.getElementById("play");
+    if (!S) {
+      document.getElementById("cmd").textContent = "6 emulated devices · 4 Lambdas · 3 DynamoDB tables · 1 alert topic";
+      document.getElementById("stext").textContent = "Pick a scenario above to trace it step by step, or click any component for details.";
+      document.getElementById("count").textContent = "–";
+      prev.disabled = next.disabled = play.disabled = true;
+      document.getElementById("wtitle").textContent = "How the pieces fit";
+      stepsEl.innerHTML = OVERVIEW.map(function (o, i) {
+        return '<li class="step" tabindex="0" role="button" data-go="' + o[0] + '"><b>' + (i + 1) + "</b><span>" + esc(o[1]) + "</span></li>";
+      }).join("");
+    } else {
+      document.getElementById("cmd").textContent = S.cmd;
+      document.getElementById("stext").textContent = cur.t;
+      document.getElementById("count").textContent = (step + 1) + " / " + S.steps.length;
+      prev.disabled = step === 0;
+      next.disabled = step === S.steps.length - 1;
+      play.disabled = false;
+      document.getElementById("wtitle").textContent = S.name + " · walkthrough";
+      stepsEl.innerHTML = S.steps.map(function (st, i) {
+        return '<li class="step' + (i === step ? " cur" : "") + '" tabindex="0" role="button" data-step="' + i + '"' + (i === step ? ' aria-current="step"' : "") + "><b>" + (i + 1) + "</b><span>" + esc(st.t) + "</span></li>";
+      }).join("");
+    }
+    play.innerHTML = timer ? "&#10073;&#10073;" : "&#9654;";
+    play.setAttribute("aria-label", timer ? "Pause" : "Play steps");
+  }
+
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  function setScen(i) { stop(); scen = i; step = 0; apply(); }
+  function go(d) {
+    if (scen < 0) return;
+    var n = SCEN[scen].steps.length;
+    step = Math.max(0, Math.min(n - 1, step + d));
+    apply();
+  }
+
+  tabs.addEventListener("click", function (ev) {
+    var b = ev.target.closest(".tab"); if (b) setScen(+b.dataset.i);
+  });
+  document.getElementById("prev").addEventListener("click", function () { stop(); go(-1); });
+  document.getElementById("next").addEventListener("click", function () { stop(); go(1); });
+  document.getElementById("play").addEventListener("click", function () {
+    if (scen < 0) return;
+    if (timer) { stop(); apply(); return; }
+    if (step === SCEN[scen].steps.length - 1) step = 0;
+    timer = setInterval(function () {
+      if (step >= SCEN[scen].steps.length - 1) { stop(); apply(); return; }
+      go(1);
+    }, 3600);
+    apply();
+  });
+
+  function stepActivate(li) {
+    if (!li) return;
+    if (li.dataset.go) {
+      for (var i = 0; i < SCEN.length; i++) if (SCEN[i].id === li.dataset.go) { setScen(i); return; }
+    } else { stop(); step = +li.dataset.step; apply(); }
+  }
+  stepsEl.addEventListener("click", function (ev) { stepActivate(ev.target.closest(".step")); });
+  stepsEl.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); stepActivate(ev.target.closest(".step")); }
+  });
+
+  // ---------------------------------------------------------------- component popover
+  function closePop() {
+    if (!openId) return;
+    var el = document.getElementById("n-" + openId);
+    if (el) el.classList.remove("open");
+    pop.hidden = true; openId = null;
+  }
+  function openPop(id) {
+    if (openId === id) { closePop(); return; }
+    closePop();
+    var n = byId[id], el = document.getElementById("n-" + id);
+    openId = id; el.classList.add("open");
+    pop.innerHTML = '<button class="x" type="button" aria-label="Close">×</button>' +
+      '<div class="k2">' + esc(n.k) + '</div><h3 id="pop-title">' + esc(n.t) + "</h3><p>" + esc(n.d) + "</p>" +
+      (n.f.length ? "<dl>" + n.f.map(function (f) { return "<dt>" + esc(f[0]) + "</dt><dd>" + esc(f[1]) + "</dd>"; }).join("") + "</dl>" : "") +
+      '<div class="src">' + esc(n.src) + "</div>";
+    pop.hidden = false;
+    var r = el.getBoundingClientRect(), w = inner.getBoundingClientRect();
+    var pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var left = r.right - w.left + 10;
+    if (left + pw > w.width - 8) left = r.left - w.left - pw - 10;
+    if (left < 8) left = Math.max(8, Math.min(w.width - pw - 8, r.left - w.left));
+    var top = Math.max(8, Math.min(r.top - w.top, w.height - ph - 8));
+    pop.style.left = left + "px"; pop.style.top = top + "px";
+    pop.querySelector(".x").addEventListener("click", function () { var back = openId; closePop(); var b = document.getElementById("n-" + back); if (b) b.focus(); });
+  }
+  inner.addEventListener("click", function (ev) {
+    var g = ev.target.closest(".node");
+    if (g) { openPop(g.dataset.id); return; }
+    if (!ev.target.closest(".pop")) closePop();
+  });
+  inner.addEventListener("keydown", function (ev) {
+    var g = ev.target.closest(".node");
+    if (g && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); openPop(g.dataset.id); }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") closePop();
+    var tag = (ev.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea") return;
+    if (ev.key === "ArrowRight" && scen >= 0) { stop(); go(1); }
+    if (ev.key === "ArrowLeft" && scen >= 0) { stop(); go(-1); }
+  });
+  window.addEventListener("resize", closePop);
+
+  // Open a scenario named in the link, e.g. #rogue
+  var start = -1;
+  try {
+    var hash = (location.hash || "").slice(1);
+    SCEN.forEach(function (s, i) { if (s.id === hash) start = i; });
+  } catch (e) { /* no hash access */ }
+  setScen(start);
+})();
+</script>
