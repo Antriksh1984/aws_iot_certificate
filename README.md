@@ -40,7 +40,7 @@ make deploy
 
 Confirm the SNS subscription email, or no alerts will arrive. Quarantine still works without it.
 
-## Demo
+## Demonstration 
 
 Run from `emulator/`:
 
@@ -58,7 +58,7 @@ Shortcuts: `make demo-fleet`, `make demo-attack`, `make quarantine`, `make reset
 
 **Detection notes:** auth failures come from IoT logs, and connects and disconnects from lifecycle events. Denied subscribes aren't logged by AWS, so only the emulator shows them. Quarantine runs within about 1 s of an alert, and AWS IoT takes up to about 20 s to start refusing the certificate.
 
-## Live dashboard (Grafana)
+## Live dashboard(Grafana)
 
 A local Grafana dashboard (`localhost:3000`, refreshes every 10 s) shows fleet telemetry, blocked attacks, the violation → quarantine timeline, and Lambda health. It reads CloudWatch through a read-only role.
 
